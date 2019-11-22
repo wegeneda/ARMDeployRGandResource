@@ -1,0 +1,138 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+    "contentVersion": "1.0.0.1",
+    "parameters": {
+        "virtualNetworkName": {
+            "type": "string",
+            "defaultValue": "ER-Peered-VNET-1",
+            "metadata": {
+                "description": "This is your Virtual Network"
+            }
+        },
+        "addressPrefix": {
+            "type": "string",
+            "metadata": {
+                "description": "The CIDR address space for your Virtual Network in Azure"
+            }
+        },
+        "NSGName": {
+            "type": "string",
+            "defaultValue": "DefaultNSG",
+            "metadata": {
+                "description": "This is name of the networkSecurityGroup that will be assigned to FrontEnd Subnet"
+            }
+        },
+        "RGLocation": {
+            "type": "string",
+            "defaultValue": "West Europe",
+            "metadata": {
+                "description": "This is location of the resource group"
+            }
+        },
+        "RGName": {
+            "type": "string",
+            "defaultValue": "DefaultResourceGroup",
+            "metadata": {
+                "description": "This is name of the resource group"
+            }
+        }
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Resources/resourceGroups",
+            "apiVersion": "2018-05-01",
+            "location": "[parameters('RGLocation')]",
+            "name": "[parameters('RGName')]"
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2017-05-10",
+            "name": "NSGDeployment",
+            "resourceGroup": "[parameters('RGName')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Resources/resourceGroups/', parameters('RGName'))]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "template": {
+                    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {},
+                    "variables": {},
+                    "resources": [
+                        {
+                            "apiVersion": "2018-07-01",
+                            "type": "Microsoft.Network/networkSecurityGroups",
+                            "name": "[parameters('NSGName')]",
+                            "location": "[parameters('RGLocation')]",
+                            "properties": {
+                                "securityRules": [
+                                    {
+                                        "name": "RDP_Rule",
+                                        "properties": {
+                                            "description": "Allow RDP",
+                                            "protocol": "Tcp",
+                                            "sourcePortRange": "*",
+                                            "destinationPortRange": "3389",
+                                            "sourceAddressPrefix": "Internet",
+                                            "destinationAddressPrefix": "*",
+                                            "access": "Allow",
+                                            "priority": 100,
+                                            "direction": "Inbound"
+                                        }
+                                    },
+                                    {
+                                        "name": "Web_Rule",
+                                        "properties": {
+                                            "description": "Allow HTTPS",
+                                            "protocol": "Tcp",
+                                            "sourcePortRange": "*",
+                                            "destinationPortRange": "443",
+                                            "sourceAddressPrefix": "Internet",
+                                            "destinationAddressPrefix": "*",
+                                            "access": "Allow",
+                                            "priority": 101,
+                                            "direction": "Inbound"
+                                        }
+                                    },
+                                    {
+                                        "name": "SSH_Rule",
+                                        "properties": {
+                                            "description": "Allow SSH",
+                                            "protocol": "Tcp",
+                                            "sourcePortRange": "*",
+                                            "destinationPortRange": "22",
+                                            "sourceAddressPrefix": "Internet",
+                                            "destinationAddressPrefix": "*",
+                                            "access": "Allow",
+                                            "priority": 102,
+                                            "direction": "Inbound"
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "apiVersion": "2018-07-01",
+                            "type": "Microsoft.Network/virtualNetworks",
+                            "name": "[parameters('virtualNetworkName')]",
+                            "location": "[parameters('RGLocation')]",
+                            "dependsOn": [
+                                "[concat('Microsoft.Network/networkSecurityGroups/', parameters('NSGName'))]"
+                            ],
+                            "properties": {
+                                "addressSpace": {
+                                    "addressPrefixes": [
+                                        "[parameters('addressPrefix')]"
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    "outputs": {}
+                }
+            }
+        }
+    ],
+    "outputs": {}
+}
